@@ -31,11 +31,6 @@ def assemble_automatons(topic_terms):
         topic_automatons[topic] = automaton
     return topic_automatons
 
-topic_automatons = assemble_automatons(topic_terms)
-
-# connects to the MongoDB database
-client = MongoClient(MONGODB_URI)
-
 # gets the last report timestamp from the database
 def get_last_report_timestamp():
     tasks = client['aggie']['tasks']
@@ -45,8 +40,6 @@ def get_last_report_timestamp():
         config = tasks.find_one(filter)
         return config['lastReportTimestamp']
     return None
-
-last_report_timestamp = get_last_report_timestamp()
 
 # gets all reports since the given timestamp
 def get_reports(timestamp):
@@ -58,8 +51,6 @@ def get_reports(timestamp):
         filter = {}
     cursor = reports.find(filter).sort('storedAt', ASCENDING).limit(MAX_REPORTS)
     return cursor
-
-reports = get_reports(last_report_timestamp)
 
 # returns a list of topics matching the report
 def get_topics(report):
@@ -93,8 +84,6 @@ def add_topics(reports):
         last_report_timestamp = report['storedAt']
     return last_report_timestamp, reports_collection.bulk_write(updates)
 
-last_report_timestamp, result = add_topics(reports)
-
 # saves the timestamp of the last report into the database
 def save_last_report_timestamp(last_report_timestamp):
     print(last_report_timestamp)
@@ -102,7 +91,12 @@ def save_last_report_timestamp(last_report_timestamp):
     filter = {'name': 'topics'}
     tasks.update_one(filter, {'$set': {'lastReportTimestamp': last_report_timestamp}}, upsert=True)
 
-save_last_report_timestamp(last_report_timestamp)
+topic_automatons = assemble_automatons(topic_terms)
+client = MongoClient(MONGODB_URI)
 
-# closes the MongoDB database connection
-client.close()
+# Executes the task
+def run():
+    last_report_timestamp = get_last_report_timestamp()
+    reports = get_reports(last_report_timestamp)
+    last_report_timestamp, result = add_topics(reports)
+    save_last_report_timestamp(last_report_timestamp)
