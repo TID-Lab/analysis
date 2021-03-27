@@ -70,3 +70,4 @@ def run():
     authors = get_authors()
     filtered_authors = filter_authors(authors)
     update_collection(filtered_authors)
+    # print('Author Process complete')
