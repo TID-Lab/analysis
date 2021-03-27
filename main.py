@@ -3,7 +3,7 @@ import schedule
 import time
 
 # 1. import tasks here
-from tasks import author, media
+from tasks import author, media, sources, tags, wordcount, timeline
 
 def run_threaded(task):
     job_thread = threading.Thread(target=task.run)
@@ -11,7 +11,11 @@ def run_threaded(task):
 
 # 2. schedule tasks here
 schedule.every(3).seconds.do(run_threaded, author)
-schedule.every(5).seconds.do(run_threaded, media)
+schedule.every(3).seconds.do(run_threaded, media)
+schedule.every(3).seconds.do(run_threaded, sources)
+schedule.every(3).seconds.do(run_threaded, tags)
+schedule.every(3).seconds.do(run_threaded, wordcount)
+schedule.every(3).seconds.do(run_threaded, timeline)
 
 while 1:
     schedule.run_pending()
