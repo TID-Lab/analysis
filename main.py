@@ -10,12 +10,12 @@ def run_threaded(task):
     job_thread.start()
 
 # 2. schedule tasks here
-schedule.every(3).seconds.do(run_threaded, author)
-schedule.every(3).seconds.do(run_threaded, media)
-schedule.every(3).seconds.do(run_threaded, sources)
-schedule.every(3).seconds.do(run_threaded, tags)
-schedule.every(3).seconds.do(run_threaded, wordcount)
-schedule.every(3).seconds.do(run_threaded, timeline)
+schedule.every(30).seconds.do(run_threaded, author)
+schedule.every(30).seconds.do(run_threaded, media)
+# schedule.every(3).seconds.do(run_threaded, sources)
+schedule.every(30).seconds.do(run_threaded, tags)
+schedule.every(30).seconds.do(run_threaded, wordcount)
+schedule.every(30).seconds.do(run_threaded, timeline)
 
 while 1:
     schedule.run_pending()

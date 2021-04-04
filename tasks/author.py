@@ -6,8 +6,10 @@ MONGODB_URI = env.get('MONGODB_URI') or 'mongodb://localhost:27017/aggie'
 client = MongoClient(MONGODB_URI)
 db = client['aggie']
 reports = db['reports']
-visualization = db['visualization']
-MAX_REPORT = 50
+visualization = db['authorVisualization']
+TOP_AUTHORS = 50
+
+MAX_REPORTS = 200
 
 class Author:
     def __init__(self, name, sub_count, report_count):
@@ -23,51 +25,46 @@ class Author:
 
 def get_authors():
     authors = []
-    for report in reports.find({"read": True}):
+    updates = []
+    
+    for report in reports.find({"read": True, "author_check": {"$exists": False}}).limit(MAX_REPORTS): 
+        print('hrllo')
         author = report["author"]
+        updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'author_check': True}}))
+
         if (any(a.name == author for a in authors)):
             next((x for x in authors if x.name == author), None).inc_count()
         else:
             authors.append(Author(author, report['metadata']['subscriberCount'], 1))
 
-    # for author in authors:
-    #     author.debug()
+    if (len(updates) > 0):  
+        reports.bulk_write(updates)
 
     return authors
 
-def filter_authors(authors):
-    sorted_authors = sorted(authors, key=lambda x: x.report_count, reverse=True)[:MAX_REPORT]
-
-    # for author in sorted_authors:
-    #     author.debug()
-
-    return sorted_authors
-
 def update_collection(authors):
-    visualization.update_one({
-        'name': 'authors'
-    },{
-        '$set': {
-            'data': []
-        }
-    }, upsert=False)
+    for author in authors: 
+        collection_author = visualization.find_one({'name': author.name})
 
-    for author in authors:
-        visualization.update_one({
-            'name': 'authors'
-        },{
-            '$push': {
-                'data': {
-                    'name': author.name,
-                    'subCount': author.sub_count,
-                    'reportCount': author.report_count
-                }
-            }
-        }, upsert=False)
+        if (collection_author is None):
+            visualization.insert_one({
+                'name': author.name,
+                'reportCount': author.report_count,
+                'subCount': author.sub_count
+            })
+        else:
+            visualization.update({
+                'name': author.name
+            },{
+                '$inc': { 'reportCount': author.report_count} 
+            })           
 
 def run():
-    # print('Hello World')
     authors = get_authors()
-    filtered_authors = filter_authors(authors)
-    update_collection(filtered_authors)
+    update_collection(authors)
     # print('Author Process complete')
+    # for i in range(200):
+    #     reports.update({'author_check': {'$exists': True}}, {'$unset': {'author_check': ''}})
+    # print('Done')
+
+    

@@ -6,7 +6,9 @@ MONGODB_URI = env.get('MONGODB_URI') or 'mongodb://localhost:27017/aggie'
 client = MongoClient(MONGODB_URI)
 db = client['aggie']
 reports = db['reports']
-visualization = db['visualization']
+visualization = db['tagVisualization']
+
+MAX_REPORTS = 200
 
 class Tag:
     def __init__(self, name, count):
@@ -21,8 +23,10 @@ class Tag:
 
 def get_tags():
     tags = []
-    for report in reports.find({"read": True}):
+    updates = []
+    for report in reports.find({"read": True, "tag_check": {"$exists": False}}).limit(MAX_REPORTS):
         report_tags = report['tags']
+        updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'tag_check': True}}))
         # print(len(report_tags))
         for tag in report_tags:
         #     print(tag)
@@ -31,33 +35,30 @@ def get_tags():
             else:
                 tags.append(Tag(tag, 1))
 
-    for tag in tags:
-        tag.debug()
+    if (len(updates) > 0):  
+        reports.bulk_write(updates)
+
+    # for tag in tags:
+    #     tag.debug()
 
     return tags
 
 def update_collection(tags):
-    visualization.update_one({
-        'name': 'tags'
-    },{
-        '$set': {
-            'data': []
-        }
-    }, upsert=False)
-
     for tag in tags:
-        visualization.update_one({
-            'name': 'tags'
-        },{
-            '$push': {
-                'data': {
-                    'name': tag.name,
-                    'count': tag.count
-                }
-            }
-        }, upsert=False)
+        collection_tag = visualization.find_one({'name': tag.name})
+        if (collection_tag is None):
+            visualization.insert_one({
+                'name': tag.name,
+                'count': tag.count
+            })
+        else:
+            visualization.update({
+                'name': tag.name
+            },{
+                '$inc': { 'count': tag.count} 
+            })  
 
 def run():
     tags = get_tags()
     update_collection(tags)
-    print('Tags Process Complete')
+    # print('Tags Process Complete')
