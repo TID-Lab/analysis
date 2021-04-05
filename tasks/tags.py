@@ -24,7 +24,8 @@ class Tag:
 def get_tags():
     tags = []
     updates = []
-    for report in reports.find({"read": True, "tag_check": {"$exists": False}}).limit(MAX_REPORTS):
+    # for report in reports.find({"read": True, "tag_check": {"$exists": False}}).limit(MAX_REPORTS):
+    for report in reports.find({'$nor': [{'read': False}, {'tag_check': {'$exists': True}}, {'tags': {'$size': 0}}]}).limit(MAX_REPORTS):
         report_tags = report['tags']
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'tag_check': True}}))
         # print(len(report_tags))
