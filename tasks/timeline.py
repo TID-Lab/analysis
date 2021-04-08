@@ -11,13 +11,18 @@ visualization = db['timeVisualization']
 
 MAX_REPORTS = 200
 
+def get_tags():
+    return 0
+
 class ReportByDate:
-    def __init__(self, hour, day, month, year, count):
+    def __init__(self, hour, day, month, year, count, read_only, tag):
         self.day = day
         self.count = count
         self.hour = hour
         self.month = month
         self.year = year
+        self.read_only = read_only
+        self.tag = tag
 
     def inc_count(self):
         self.count += 1
@@ -28,20 +33,25 @@ class ReportByDate:
 def bin_dates():
     updates = []
     date_bins = []
+    read_date_bins = []
     for report in reports.find({'read': True, "time_check": {"$exists": False}}).limit(MAX_REPORTS):
         report_time = report['authoredAt']
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'time_check': True}}))
         if (any(t.hour == report_time.hour and t.day == report_time.day and t.month == report_time.month and t.year == report_time.year for t in date_bins)):
             next((x for x in date_bins if x.hour == report_time.hour and x.day == report_time.day and x.month == report_time.month and x.year == report_time.year), None).inc_count()
         else:
-            date_bins.append(ReportByDate(report_time.hour,report_time.day,report_time.month,report_time.year, 1))
+            date_bins.append(ReportByDate(report_time.hour,report_time.day,report_time.month,report_time.year, 1, False, 'all-tags'))
     
+        if (report['read'] == True):
+            if (any(t.hour == report_time.hour and t.day == report_time.day and t.month == report_time.month and t.year == report_time.year for t in read_date_bins)):
+                next((x for x in read_date_bins if x.hour == report_time.hour and x.day == report_time.day and x.month == report_time.month and x.year == report_time.year), None).inc_count()
+            else:
+                read_date_bins.append(ReportByDate(report_time.hour,report_time.day,report_time.month,report_time.year, 1, True, 'all-tags'))
+   
     if (len(updates) > 0):  
         reports.bulk_write(updates)
-    # for bin in date_bins:
-    #     bin.debug()
 
-    return date_bins
+    return date_bins + read_date_bins
 
 def update_collection(date_bins):
     for bin in date_bins:
@@ -49,7 +59,9 @@ def update_collection(date_bins):
             'day': bin.day, 
             'hour': bin.hour, 
             'month': bin.month, 
-            'year': bin.year
+            'year': bin.year,
+            'read_only': bin.read_only,
+            'tag': bin.tag
         })
         if (collection_time is None):
             visualization.insert_one({
@@ -57,14 +69,18 @@ def update_collection(date_bins):
                 'hour': bin.hour, 
                 'month': bin.month, 
                 'year': bin.year,
-                'count': bin.count
+                'count': bin.count,
+                'read_only': bin.read_only,
+                'tag': bin.tag
             })
         else:
             visualization.update({
                 'day': bin.day, 
                 'hour': bin.hour, 
                 'month': bin.month, 
-                'year': bin.year
+                'year': bin.year,
+                'read_only': bin.read_only,
+                'tag': bin.tag
             },{
                 '$inc': { 'count': bin.count } 
             })  
@@ -72,4 +88,3 @@ def update_collection(date_bins):
 def run():
     date_bins = bin_dates()
     update_collection(date_bins)
-    # print('Timeline Process Complete')
