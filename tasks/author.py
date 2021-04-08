@@ -33,30 +33,42 @@ def get_tags():
 
     return all_tags
 
-def get_authors():
+def get_authors(all_tags):
     authors = []
     updates = []
     read_authors = []
+    tag_authors = []
     
-    for report in reports.find({'read': True, "author_check": {"$exists": False}}).limit(MAX_REPORTS): 
+    for report in reports.find({"author_check": {"$exists": False}}).limit(MAX_REPORTS): 
         author = report["author"]
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'author_check': True}}))
 
+        #READ REPORTS
         if (report['read'] == True):
             if (any(a.name == author for a in read_authors)):
                 next((x for x in read_authors if x.name == author), None).inc_count()
             else:
                 read_authors.append(Author(author, report['metadata']['subscriberCount'], 1, True, 'all-tags'))
 
+        #ALL REPORTS
         if (any(a.name == author for a in authors)):
             next((x for x in authors if x.name == author), None).inc_count()
         else:
             authors.append(Author(author, report['metadata']['subscriberCount'], 1, False, 'all-tags'))
-
+        
+        #ADDING TAG DATA
+        for tag in all_tags:
+            if (tag in report['tags']):
+                if (any((a.name == author and a.tag == tag) for a in tag_authors)):
+                    next((x for x in tag_authors if (x.name == author and x.tag == tag)), None).inc_count()
+                else:
+                    tag_authors.append(Author(author, report['metadata']['subscriberCount'], 1, True, tag)) 
+    
+    
     if (len(updates) > 0):  
         reports.bulk_write(updates)
 
-    return authors + read_authors
+    return authors + read_authors + tag_authors
 
 def update_collection(authors):
     for author in authors: 
@@ -80,6 +92,6 @@ def update_collection(authors):
             })           
 
 def run():
-    # all_tags = get_tags()
-    authors = get_authors()
+    all_tags = get_tags()
+    authors = get_authors(all_tags)
     update_collection(authors)

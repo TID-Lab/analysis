@@ -13,8 +13,16 @@ client = MongoClient(MONGODB_URI)
 db = client['aggie']
 reports = db['reports']
 visualization = db['wordVisualization']
+tags = db['tagVisualization']
 
 MAX_REPORTS = 20
+
+def get_tags():
+    all_tags = []
+    for tag in tags.find({}):
+        all_tags.append(tag['name'])
+
+    return all_tags
 
 class Word:
     def __init__(self, name, count, read_only, tag):
@@ -29,24 +37,40 @@ class Word:
     def debug(self):
         print('name ', self.name, ' count ', self.count)
 
-def get_words():
+def get_words(all_tags):
     updates = []
     total_content = ''
     read_total_content = ''
-    for report in reports.find({"read": True, "word_check": {"$exists": False}}).limit(MAX_REPORTS):
+    tagged_total_content = []
+
+    for tag in all_tags:
+        tagged_total_content.append({'tag': tag, 'content': ''})
+
+    for report in reports.find({"word_check": {"$exists": False}}).limit(MAX_REPORTS):
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'word_check': True}}))
         content = report['content']
+        
+        # ALL REPORTS
         total_content = total_content + ' ' + content
 
+        # READ REPORTS
         if (report['read'] == True):
             read_total_content = read_total_content + ' ' + content
+
+        # TAGGED REPORTS
+        for i in range(len(all_tags)):
+            if (tag in report['tags']):
+                tagged_total_content[i]['content'] = tagged_total_content[i]['content'] + ' ' + content 
 
     if (len(updates) > 0):  
         reports.bulk_write(updates)
 
-    return [word(total_content), word(read_total_content)]
+    for item in tagged_total_content:
+        item['processed_word'] = word(item['content'])
 
-def filter_words(words1, words2):
+    return [word(total_content), word(read_total_content), tagged_total_content]
+
+def filter_words(words1, words2, tagged_total_content):
     filtered_words = []
     for word in words1.most_common():
         if (not any(w.lower() == word[0].lower() for w in wordsToExclude)):
@@ -55,6 +79,11 @@ def filter_words(words1, words2):
     for word in words2.most_common():
         if (not any(w.lower() == word[0].lower() for w in wordsToExclude)):
             filtered_words.append(Word(word[0], word[1], True, 'all-tags'))
+
+    for item in tagged_total_content:
+        for word in item['processed_word'].most_common():
+            if (not any(w.lower() == word[0].lower() for w in wordsToExclude)):
+                filtered_words.append(Word(word[0], word[1], True, item['tag']))    
     
     return filtered_words
     
@@ -82,6 +111,7 @@ def update_collection(words):
             })  
 
 def run():
-    all_words = (get_words())
-    filtered_words = filter_words(all_words[0], all_words[1])
+    all_tags = get_tags()
+    all_words = (get_words(all_tags))
+    filtered_words = filter_words(all_words[0], all_words[1], all_words[2])
     update_collection(filtered_words)
