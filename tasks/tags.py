@@ -7,6 +7,7 @@ client = MongoClient(MONGODB_URI)
 db = client['aggie']
 reports = db['reports']
 visualization = db['tagVisualization']
+smtcTags = db['smtctags']
 
 MAX_REPORTS = 200
 
@@ -24,13 +25,20 @@ class Tag:
 def get_tags():
     tags = []
     updates = []
-    # for report in reports.find({"read": True, "tag_check": {"$exists": False}}).limit(MAX_REPORTS):
-    for report in reports.find({'$nor': [{'read': False}, {'tag_check': {'$exists': True}}, {'tags': {'$size': 0}}]}).limit(MAX_REPORTS):
-        report_tags = report['tags']
+    for report in reports.find({'$nor': [{'read': False}, {'tag_check': {'$exists': True}}, {'smtcTags': {'$size': 0}}]}).limit(MAX_REPORTS):
+        
+        smtcTagList = []
+
+        tagid_list = (report['smtcTags'])
+        for tagid in tagid_list:
+            smtctag = smtcTags.find_one({'_id': tagid})['name']
+            if (smtctag != None):
+                smtcTagList.append(smtctag)
+        
+        report_tags = smtcTagList
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'tag_check': True}}))
-        # print(len(report_tags))
+        
         for tag in report_tags:
-        #     print(tag)
             if (any(t.name == tag for t in tags)):
                 next((x for x in tags if x.name == tag), None).inc_count()
             else:
@@ -62,4 +70,3 @@ def update_collection(tags):
 def run():
     tags = get_tags()
     update_collection(tags)
-    # print('Tags Process Complete')

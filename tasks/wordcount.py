@@ -14,6 +14,7 @@ db = client['aggie']
 reports = db['reports']
 visualization = db['wordVisualization']
 tags = db['tagVisualization']
+smtcTags = db['smtctags']
 
 MAX_REPORTS = 20
 
@@ -48,8 +49,9 @@ def get_words(all_tags):
 
     for report in reports.find({"word_check": {"$exists": False}}).limit(MAX_REPORTS):
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'word_check': True}}))
-        content = report['content']
         
+        content = report['content']
+
         # ALL REPORTS
         total_content = total_content + ' ' + content
 
@@ -59,7 +61,7 @@ def get_words(all_tags):
 
         # TAGGED REPORTS
         for i in range(len(all_tags)):
-            if (tag in report['tags']):
+            if (all_tags[i] in smtc_taglist):
                 tagged_total_content[i]['content'] = tagged_total_content[i]['content'] + ' ' + content 
 
     if (len(updates) > 0):  

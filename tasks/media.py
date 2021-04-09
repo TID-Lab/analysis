@@ -8,6 +8,7 @@ db = client['aggie']
 reports = db['reports']
 visualization = db['mediaVisualization']
 tags = db['tagVisualization']
+smtcTags = db['smtctags']
 
 MAX_REPORTS = 200
 
@@ -36,8 +37,18 @@ def get_media_types(all_tags):
     media_types = []
     read_media_types = []
     tagged_media_types = []
+
     for report in reports.find({"media_check": {"$exists": False}}).limit(MAX_REPORTS):
         media = report['metadata']['type']
+
+        # Get SMTC Tags
+        smtc_taglist = []
+        tagid_list = (report['smtcTags'])
+        for tagid in tagid_list:
+            smtctag = smtcTags.find_one({'_id': tagid})['name']
+            if (smtctag != None):
+                smtc_taglist.append(smtctag)
+        
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'media_check': True}}))
         
         # ALL REPORTS
@@ -55,7 +66,7 @@ def get_media_types(all_tags):
     
         # TAGGED REPORTS
         for tag in all_tags:
-            if (tag in report['tags']):
+            if (tag in smtc_taglist):
                 if (any((m.name == media and m.tag == tag) for m in tagged_media_types)):
                     next((x for x in tagged_media_types if (x.name == media and x.tag == tag)), None).inc_count()
                 else:

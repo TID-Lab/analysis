@@ -8,6 +8,7 @@ db = client['aggie']
 reports = db['reports']
 visualization = db['authorVisualization']
 tags = db['tagVisualization']
+smtcTags = db['smtctags']
 TOP_AUTHORS = 50
 
 MAX_REPORTS = 200
@@ -41,7 +42,16 @@ def get_authors(all_tags):
     
     for report in reports.find({"author_check": {"$exists": False}}).limit(MAX_REPORTS): 
         author = report["author"]
+
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'author_check': True}}))
+
+        # Get SMTC Tags
+        smtc_taglist = []
+        tagid_list = (report['smtcTags'])
+        for tagid in tagid_list:
+            smtctag = smtcTags.find_one({'_id': tagid})['name']
+            if (smtctag != None):
+                smtc_taglist.append(smtctag)
 
         #READ REPORTS
         if (report['read'] == True):
@@ -58,7 +68,7 @@ def get_authors(all_tags):
         
         #ADDING TAG DATA
         for tag in all_tags:
-            if (tag in report['tags']):
+            if (tag in smtc_taglist):
                 if (any((a.name == author and a.tag == tag) for a in tag_authors)):
                     next((x for x in tag_authors if (x.name == author and x.tag == tag)), None).inc_count()
                 else:

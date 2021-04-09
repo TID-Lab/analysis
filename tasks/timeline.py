@@ -9,6 +9,7 @@ db = client['aggie']
 reports = db['reports']
 visualization = db['timeVisualization']
 tags = db['tagVisualization']
+smtcTags = db['smtctags']
 
 MAX_REPORTS = 200
 
@@ -40,10 +41,20 @@ def bin_dates(all_tags):
     date_bins = []
     read_date_bins = []
     tagged_date_bins = []
+
     for report in reports.find({"time_check": {"$exists": False}}).limit(MAX_REPORTS):
         report_time = report['authoredAt']
+
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'time_check': True}}))
         
+        # SMTC Tags
+        smtc_taglist = []
+        tagid_list = (report['smtcTags'])
+        for tagid in tagid_list:
+            smtctag = smtcTags.find_one({'_id': tagid})['name']
+            if (smtctag != None):
+                smtc_taglist.append(smtctag)
+
         #ALL REPORTS
         if (any(t.hour == report_time.hour and t.day == report_time.day and t.month == report_time.month and t.year == report_time.year for t in date_bins)):
             next((x for x in date_bins if x.hour == report_time.hour and x.day == report_time.day and x.month == report_time.month and x.year == report_time.year), None).inc_count()
@@ -59,7 +70,7 @@ def bin_dates(all_tags):
    
         # TAGGED REPORTS
         for tag in all_tags:
-            if (tag in report['tags']):
+            if (tag in smtc_taglist):
                 if (any((t.hour == report_time.hour and t.day == report_time.day and t.month == report_time.month and t.year == report_time.year and t.tag == tag) for t in tagged_date_bins)):
                     next((x for x in tagged_date_bins if (x.hour == report_time.hour and x.day == report_time.day and x.month == report_time.month and x.year == report_time.year and x.tag == tag)), None).inc_count()
                 else:
