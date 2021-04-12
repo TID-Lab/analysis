@@ -11,7 +11,7 @@ tags = db['tagVisualization']
 smtcTags = db['smtctags']
 TOP_AUTHORS = 50
 
-MAX_REPORTS = 200
+MAX_REPORTS = 350
 
 class Author:
     def __init__(self, name, sub_count, report_count, read_only, tag):
@@ -40,7 +40,7 @@ def get_authors(all_tags):
     read_authors = []
     tag_authors = []
     
-    for report in reports.find({"author_check": {"$exists": False}}).limit(MAX_REPORTS): 
+    for report in reports.find({"author_check": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS): 
         author = report["author"]
 
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'author_check': True}}))

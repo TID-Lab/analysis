@@ -11,7 +11,7 @@ visualization = db['timeVisualization']
 tags = db['tagVisualization']
 smtcTags = db['smtctags']
 
-MAX_REPORTS = 200
+MAX_REPORTS = 350
 
 def get_tags():
     all_tags = []
@@ -42,7 +42,7 @@ def bin_dates(all_tags):
     read_date_bins = []
     tagged_date_bins = []
 
-    for report in reports.find({"time_check": {"$exists": False}}).limit(MAX_REPORTS):
+    for report in reports.find({"time_check": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS):
         report_time = report['authoredAt']
 
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'time_check': True}}))

@@ -10,7 +10,7 @@ visualization = db['mediaVisualization']
 tags = db['tagVisualization']
 smtcTags = db['smtctags']
 
-MAX_REPORTS = 200
+MAX_REPORTS = 350
 
 class MediaType:
     def __init__(self, name, count, read_only, tag):
@@ -38,7 +38,7 @@ def get_media_types(all_tags):
     read_media_types = []
     tagged_media_types = []
 
-    for report in reports.find({"media_check": {"$exists": False}}).limit(MAX_REPORTS):
+    for report in reports.find({"media_check": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS):
         media = report['metadata']['type']
 
         # Get SMTC Tags

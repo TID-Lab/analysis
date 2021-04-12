@@ -16,7 +16,7 @@ visualization = db['wordVisualization']
 tags = db['tagVisualization']
 smtcTags = db['smtctags']
 
-MAX_REPORTS = 20
+MAX_REPORTS = 350
 
 def get_tags():
     all_tags = []
@@ -47,10 +47,18 @@ def get_words(all_tags):
     for tag in all_tags:
         tagged_total_content.append({'tag': tag, 'content': ''})
 
-    for report in reports.find({"word_check": {"$exists": False}}).limit(MAX_REPORTS):
+    for report in reports.find({"word_check": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS):
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'word_check': True}}))
         
         content = report['content']
+        
+        # SMTC Tags
+        smtc_taglist = []
+        tagid_list = (report['smtcTags'])
+        for tagid in tagid_list:
+            smtctag = smtcTags.find_one({'_id': tagid})['name']
+            if (smtctag != None):
+                smtc_taglist.append(smtctag)
 
         # ALL REPORTS
         total_content = total_content + ' ' + content
