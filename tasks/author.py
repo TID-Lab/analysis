@@ -49,8 +49,10 @@ def get_authors(all_tags):
         if (any(a.name == author for a in authors)):
             next((x for x in authors if x.name == author), None).inc_count()
         else:
-            authors.append(Author(author, report['metadata']['subscriberCount'], 1, False, 'all-tags'))
-        
+            if (report["_media"][0] == "crowdtangle"):
+                authors.append(Author(author, report['metadata']['subscriberCount'], 1, False, 'all-tags'))
+            elif (report["_media"][0] == "twitter"):
+                authors.append(Author(author, report['metadata']['followerCount'], 1, False, 'all-tags'))
     
     for report in reports.find({"read": True, "author_check_read": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS): 
         author = report["author"]
