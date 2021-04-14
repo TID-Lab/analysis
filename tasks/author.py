@@ -43,7 +43,19 @@ def get_authors(all_tags):
     for report in reports.find({"author_check": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS): 
         author = report["author"]
 
-        updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'author_check': True}}))
+        updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'author_check': True}}))            
+
+        #ALL REPORTS
+        if (any(a.name == author for a in authors)):
+            next((x for x in authors if x.name == author), None).inc_count()
+        else:
+            authors.append(Author(author, report['metadata']['subscriberCount'], 1, False, 'all-tags'))
+        
+    
+    for report in reports.find({"read": True, "author_check_read": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS): 
+        author = report["author"]
+
+        updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'author_check_read': True}}))
 
         # Get SMTC Tags
         smtc_taglist = []
@@ -53,19 +65,12 @@ def get_authors(all_tags):
             if (smtctag != None):
                 smtc_taglist.append(smtctag)
 
-        #READ REPORTS
-        if (report['read'] == True):
-            if (any(a.name == author for a in read_authors)):
-                next((x for x in read_authors if x.name == author), None).inc_count()
-            else:
-                read_authors.append(Author(author, report['metadata']['subscriberCount'], 1, True, 'all-tags'))
-
-        #ALL REPORTS
-        if (any(a.name == author for a in authors)):
-            next((x for x in authors if x.name == author), None).inc_count()
+        # ADDING READ REPORTS DATA
+        if (any(a.name == author for a in read_authors)):
+            next((x for x in read_authors if x.name == author), None).inc_count()
         else:
-            authors.append(Author(author, report['metadata']['subscriberCount'], 1, False, 'all-tags'))
-        
+            read_authors.append(Author(author, report['metadata']['subscriberCount'], 1, True, 'all-tags'))
+
         #ADDING TAG DATA
         for tag in all_tags:
             if (tag in smtc_taglist):

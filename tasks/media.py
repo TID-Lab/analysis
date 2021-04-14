@@ -40,6 +40,17 @@ def get_media_types(all_tags):
 
     for report in reports.find({"media_check": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS):
         media = report['metadata']['type']
+        
+        updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'media_check': True}}))
+        
+        # ALL REPORTS
+        if (any(m.name == media for m in media_types)):
+            next((x for x in media_types if x.name == media), None).inc_count()
+        else:
+            media_types.append(MediaType(media, 1, False, 'all-tags'))            
+
+    for report in reports.find({"read": True, "media_check_read": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS):
+        media = report['metadata']['type']
 
         # Get SMTC Tags
         smtc_taglist = []
@@ -49,29 +60,21 @@ def get_media_types(all_tags):
             if (smtctag != None):
                 smtc_taglist.append(smtctag)
         
-        updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'media_check': True}}))
-        
-        # ALL REPORTS
-        if (any(m.name == media for m in media_types)):
-            next((x for x in media_types if x.name == media), None).inc_count()
-        else:
-            media_types.append(MediaType(media, 1, False, 'all-tags'))
+        updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'media_check_read': True}}))
 
-        # READ REPORTS 
-        if (report['read'] == True):
-            if (any(m.name == media for m in read_media_types)):
-                next((x for x in read_media_types if x.name == media), None).inc_count()
-            else:
-                read_media_types.append(MediaType(media, 1, True, 'all-tags'))
-    
+        # READ REPORTS
+        if (any(m.name == media for m in read_media_types)):
+            next((x for x in read_media_types if x.name == media), None).inc_count()
+        else:
+            read_media_types.append(MediaType(media, 1, True, 'all-tags'))
+
         # TAGGED REPORTS
         for tag in all_tags:
             if (tag in smtc_taglist):
                 if (any((m.name == media and m.tag == tag) for m in tagged_media_types)):
                     next((x for x in tagged_media_types if (x.name == media and x.tag == tag)), None).inc_count()
                 else:
-                    tagged_media_types.append(MediaType(media, 1, True, tag))
-
+                    tagged_media_types.append(MediaType(media, 1, True, tag))    
     
     if (len(updates) > 0):  
         reports.bulk_write(updates)
