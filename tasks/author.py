@@ -40,7 +40,7 @@ def get_authors(all_tags):
     read_authors = []
     tag_authors = []
     
-    for report in reports.find({"author_check": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS): 
+    for report in reports.find({"author_check": {"$exists": False}, "metadata.subscriberCount": {"$exists": True}}).sort('authoredAt', 1).limit(MAX_REPORTS): 
         author = report["author"]
 
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'author_check': True}}))            

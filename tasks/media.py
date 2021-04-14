@@ -38,7 +38,7 @@ def get_media_types(all_tags):
     read_media_types = []
     tagged_media_types = []
 
-    for report in reports.find({"media_check": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS):
+    for report in reports.find({"media_check": {"$exists": False}, "metadata.type": {"$exists": True}}).sort('authoredAt', 1).limit(MAX_REPORTS):
         media = report['metadata']['type']
         
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'media_check': True}}))
