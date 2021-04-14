@@ -38,7 +38,7 @@ def get_media_types(all_tags):
     read_media_types = []
     tagged_media_types = []
 
-    for report in reports.find({"media_check": {"$exists": False}, "metadata.type": {"$exists": True}}).sort('authoredAt', 1).limit(MAX_REPORTS):
+    for report in reports.find({"media_check": {"$exists": False}, "_media": "crowdtangle"}).sort('authoredAt', 1).limit(MAX_REPORTS):
         media = report['metadata']['type']
         
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'media_check': True}}))
@@ -49,7 +49,7 @@ def get_media_types(all_tags):
         else:
             media_types.append(MediaType(media, 1, False, 'all-tags'))            
 
-    for report in reports.find({"read": True, "media_check_read": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS):
+    for report in reports.find({"read": True, "media_check_read": {"$exists": False}, "_media": "crowdtangle"}).sort('authoredAt', 1).limit(MAX_REPORTS):
         media = report['metadata']['type']
 
         # Get SMTC Tags
