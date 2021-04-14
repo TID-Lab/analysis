@@ -40,7 +40,7 @@ def get_authors(all_tags):
     read_authors = []
     tag_authors = []
     
-    for report in reports.find({"author_check": {"$exists": False}, "metadata.subscriberCount": {"$exists": True}}).sort('authoredAt', 1).limit(MAX_REPORTS): 
+    for report in reports.find({"author_check": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS):  
         author = report["author"]
 
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'author_check': True}}))            
@@ -71,7 +71,10 @@ def get_authors(all_tags):
         if (any(a.name == author for a in read_authors)):
             next((x for x in read_authors if x.name == author), None).inc_count()
         else:
-            read_authors.append(Author(author, report['metadata']['subscriberCount'], 1, True, 'all-tags'))
+            if (report["_media"][0] == "crowdtangle"):
+                read_authors.append(Author(author, report['metadata']['subscriberCount'], 1, True, 'all-tags'))
+            if (report["_media"][0] == "twitter"):
+                read_authors.append(Author(author, report['metadata']['followerCount'], 1, True, 'all-tags'))
 
         #ADDING TAG DATA
         for tag in all_tags:
@@ -79,7 +82,10 @@ def get_authors(all_tags):
                 if (any((a.name == author and a.tag == tag) for a in tag_authors)):
                     next((x for x in tag_authors if (x.name == author and x.tag == tag)), None).inc_count()
                 else:
-                    tag_authors.append(Author(author, report['metadata']['subscriberCount'], 1, True, tag)) 
+                    if (report["_media"][0] == "crowdtangle"):
+                        tag_authors.append(Author(author, report['metadata']['subscriberCount'], 1, True, tag)) 
+                    if (report["_media"][0] == "twitter"):
+                        tag_authors.append(Author(author, report['metadata']['followerCount'], 1, True, tag)) 
     
     
     if (len(updates) > 0):  
