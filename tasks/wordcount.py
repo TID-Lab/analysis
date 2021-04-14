@@ -129,4 +129,3 @@ def run():
     all_words = (get_words(all_tags))
     filtered_words = filter_words(all_words[0], all_words[1], all_words[2])
     update_collection(filtered_words)
-    print('DONE')
