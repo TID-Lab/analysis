@@ -9,9 +9,10 @@ db = client['aggie']
 reports = db['reports']
 visualization = db['authorVisualization']
 tags = db['tagVisualization']
+smtcTags = db['smtctags']
 TOP_AUTHORS = 50
 
-MAX_REPORTS = 200
+MAX_REPORTS = 350
 
 class Author:
     def __init__(self, name, sub_count, report_count, read_only, tag):
@@ -40,30 +41,52 @@ def get_authors(all_tags):
     read_authors = []
     tag_authors = []
     
-    for report in reports.find({"author_check": {"$exists": False}}).limit(MAX_REPORTS): 
+    for report in reports.find({"author_check": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS):  
         author = report["author"]
-        updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'author_check': True}}))
 
-        #READ REPORTS
-        if (report['read'] == True):
-            if (any(a.name == author for a in read_authors)):
-                next((x for x in read_authors if x.name == author), None).inc_count()
-            else:
-                read_authors.append(Author(author, report['metadata']['subscriberCount'], 1, True, 'all-tags'))
+        updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'author_check': True}}))            
 
         #ALL REPORTS
         if (any(a.name == author for a in authors)):
             next((x for x in authors if x.name == author), None).inc_count()
         else:
-            authors.append(Author(author, report['metadata']['subscriberCount'], 1, False, 'all-tags'))
-        
+            if (report["_media"][0] == "crowdtangle"):
+                authors.append(Author(author, report['metadata']['subscriberCount'], 1, False, 'all-tags'))
+            elif (report["_media"][0] == "twitter"):
+                authors.append(Author(author, report['metadata']['followerCount'], 1, False, 'all-tags'))
+    
+    for report in reports.find({"read": True, "author_check_read": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS): 
+        author = report["author"]
+
+        updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'author_check_read': True}}))
+
+        # Get SMTC Tags
+        smtc_taglist = []
+        tagid_list = (report['smtcTags'])
+        for tagid in tagid_list:
+            smtctag = smtcTags.find_one({'_id': tagid})['name']
+            if (smtctag != None):
+                smtc_taglist.append(smtctag)
+
+        # ADDING READ REPORTS DATA
+        if (any(a.name == author for a in read_authors)):
+            next((x for x in read_authors if x.name == author), None).inc_count()
+        else:
+            if (report["_media"][0] == "crowdtangle"):
+                read_authors.append(Author(author, report['metadata']['subscriberCount'], 1, True, 'all-tags'))
+            if (report["_media"][0] == "twitter"):
+                read_authors.append(Author(author, report['metadata']['followerCount'], 1, True, 'all-tags'))
+
         #ADDING TAG DATA
         for tag in all_tags:
-            if (tag in report['tags']):
+            if (tag in smtc_taglist):
                 if (any((a.name == author and a.tag == tag) for a in tag_authors)):
                     next((x for x in tag_authors if (x.name == author and x.tag == tag)), None).inc_count()
                 else:
-                    tag_authors.append(Author(author, report['metadata']['subscriberCount'], 1, True, tag)) 
+                    if (report["_media"][0] == "crowdtangle"):
+                        tag_authors.append(Author(author, report['metadata']['subscriberCount'], 1, True, tag)) 
+                    if (report["_media"][0] == "twitter"):
+                        tag_authors.append(Author(author, report['metadata']['followerCount'], 1, True, tag)) 
     
     
     if (len(updates) > 0):  

@@ -15,8 +15,9 @@ db = client['aggie']
 reports = db['reports']
 visualization = db['wordVisualization']
 tags = db['tagVisualization']
+smtcTags = db['smtctags']
 
-MAX_REPORTS = 20
+MAX_REPORTS = 350
 
 def get_tags():
     all_tags = []
@@ -47,22 +48,35 @@ def get_words(all_tags):
     for tag in all_tags:
         tagged_total_content.append({'tag': tag, 'content': ''})
 
-    for report in reports.find({"word_check": {"$exists": False}}).limit(MAX_REPORTS):
+    for report in reports.find({"word_check": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS):
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'word_check': True}}))
+        
+        content = report['content']
+
+        # ALL REPORTS
+        total_content = total_content + ' ' + content 
+
+    for report in reports.find({"read": True, "word_check_read": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS):
+        updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'word_check_read': True}}))
+        
         content = report['content']
         
-        # ALL REPORTS
-        total_content = total_content + ' ' + content
-
+        # SMTC Tags
+        smtc_taglist = []
+        tagid_list = (report['smtcTags'])
+        for tagid in tagid_list:
+            smtctag = smtcTags.find_one({'_id': tagid})['name']
+            if (smtctag != None):
+                smtc_taglist.append(smtctag)
+        
         # READ REPORTS
-        if (report['read'] == True):
             read_total_content = read_total_content + ' ' + content
 
         # TAGGED REPORTS
         for i in range(len(all_tags)):
-            if (tag in report['tags']):
-                tagged_total_content[i]['content'] = tagged_total_content[i]['content'] + ' ' + content 
-
+            if (all_tags[i] in smtc_taglist):
+                tagged_total_content[i]['content'] = tagged_total_content[i]['content'] + ' ' + content    
+    
     if (len(updates) > 0):  
         reports.bulk_write(updates)
 

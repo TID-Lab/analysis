@@ -8,13 +8,15 @@ client = MongoClient(MONGODB_URI)
 db = client['aggie']
 reports = db['reports']
 visualization = db['tagVisualization']
+smtcTags = db['smtctags']
 
-MAX_REPORTS = 200
+MAX_REPORTS = 350
 
 class Tag:
-    def __init__(self, name, count):
+    def __init__(self, name, count, color):
         self.name = name
         self.count = count
+        self.color = color
     
     def inc_count(self):
         self.count += 1
@@ -25,17 +27,24 @@ class Tag:
 def get_tags():
     tags = []
     updates = []
-    # for report in reports.find({"read": True, "tag_check": {"$exists": False}}).limit(MAX_REPORTS):
-    for report in reports.find({'$nor': [{'read': False}, {'tag_check': {'$exists': True}}, {'tags': {'$size': 0}}]}).limit(MAX_REPORTS):
-        report_tags = report['tags']
+    for report in reports.find({'$nor': [{'read': False}, {'tag_check': {'$exists': True}}, {'smtcTags': {'$size': 0}}]}).sort('authoredAt', 1).limit(MAX_REPORTS):
+        
+        smtcTagList = []
+
+        tagid_list = (report['smtcTags'])
+        for tagid in tagid_list:
+            smtctag_obj = smtcTags.find_one({'_id': tagid})
+            if (smtctag_obj != None):
+                smtcTagList.append(Tag(smtctag_obj['name'], 0, smtctag_obj['color']))
+
+        report_tags = smtcTagList
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'tag_check': True}}))
-        # print(len(report_tags))
+        
         for tag in report_tags:
-        #     print(tag)
-            if (any(t.name == tag for t in tags)):
-                next((x for x in tags if x.name == tag), None).inc_count()
+            if (any(t.name == tag.name for t in tags)):
+                next((x for x in tags if x.name == tag.name), None).inc_count()
             else:
-                tags.append(Tag(tag, 1))
+                tags.append(Tag(tag.name, 1, tag.color))
 
     if (len(updates) > 0):  
         reports.bulk_write(updates)
@@ -51,7 +60,8 @@ def update_collection(tags):
         if (collection_tag is None):
             visualization.insert_one({
                 'name': tag.name,
-                'count': tag.count
+                'count': tag.count,
+                'color': tag.color
             })
         else:
             visualization.update({

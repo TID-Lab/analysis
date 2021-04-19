@@ -3,7 +3,7 @@ import schedule
 import time
 
 # 1. import tasks here
-from tasks import author, media, sources, tags, wordcount, timeline
+from tasks import author, media, tags, wordcount, timeline
 
 def run_threaded(task):
     job_thread = threading.Thread(target=task.run)

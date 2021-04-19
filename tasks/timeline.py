@@ -10,8 +10,9 @@ db = client['aggie']
 reports = db['reports']
 visualization = db['timeVisualization']
 tags = db['tagVisualization']
+smtcTags = db['smtctags']
 
-MAX_REPORTS = 200
+MAX_REPORTS = 350
 
 def get_tags():
     all_tags = []
@@ -41,31 +42,45 @@ def bin_dates(all_tags):
     date_bins = []
     read_date_bins = []
     tagged_date_bins = []
-    for report in reports.find({"time_check": {"$exists": False}}).limit(MAX_REPORTS):
+
+    for report in reports.find({"time_check": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS):
         report_time = report['authoredAt']
+
         updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'time_check': True}}))
-        
+
         #ALL REPORTS
         if (any(t.hour == report_time.hour and t.day == report_time.day and t.month == report_time.month and t.year == report_time.year for t in date_bins)):
             next((x for x in date_bins if x.hour == report_time.hour and x.day == report_time.day and x.month == report_time.month and x.year == report_time.year), None).inc_count()
         else:
             date_bins.append(ReportByDate(report_time.hour,report_time.day,report_time.month,report_time.year, 1, False, 'all-tags'))
     
-        #READ REPORTS
-        if (report['read'] == True):
-            if (any(t.hour == report_time.hour and t.day == report_time.day and t.month == report_time.month and t.year == report_time.year for t in read_date_bins)):
-                next((x for x in read_date_bins if x.hour == report_time.hour and x.day == report_time.day and x.month == report_time.month and x.year == report_time.year), None).inc_count()
-            else:
-                read_date_bins.append(ReportByDate(report_time.hour,report_time.day,report_time.month,report_time.year, 1, True, 'all-tags'))
-   
+    for report in reports.find({"read": True, "time_check_read": {"$exists": False}}).sort('authoredAt', 1).limit(MAX_REPORTS):
+        report_time = report['authoredAt']
+
+        updates.append(UpdateOne({'_id': report['_id']}, {'$set': {'time_check_read': True}}))
+         
+        # SMTC Tags
+        smtc_taglist = []
+        tagid_list = (report['smtcTags'])
+        for tagid in tagid_list:
+            smtctag = smtcTags.find_one({'_id': tagid})['name']
+            if (smtctag != None):
+                smtc_taglist.append(smtctag)
+
+        # READ REPORTS
+        if (any(t.hour == report_time.hour and t.day == report_time.day and t.month == report_time.month and t.year == report_time.year for t in read_date_bins)):
+            next((x for x in read_date_bins if x.hour == report_time.hour and x.day == report_time.day and x.month == report_time.month and x.year == report_time.year), None).inc_count()
+        else:
+            read_date_bins.append(ReportByDate(report_time.hour,report_time.day,report_time.month,report_time.year, 1, True, 'all-tags'))
+
         # TAGGED REPORTS
         for tag in all_tags:
-            if (tag in report['tags']):
+            if (tag in smtc_taglist):
                 if (any((t.hour == report_time.hour and t.day == report_time.day and t.month == report_time.month and t.year == report_time.year and t.tag == tag) for t in tagged_date_bins)):
                     next((x for x in tagged_date_bins if (x.hour == report_time.hour and x.day == report_time.day and x.month == report_time.month and x.year == report_time.year and x.tag == tag)), None).inc_count()
                 else:
                     tagged_date_bins.append(ReportByDate(report_time.hour,report_time.day,report_time.month,report_time.year, 1, True, tag))
-    
+        
     if (len(updates) > 0):  
         reports.bulk_write(updates)
 
