@@ -1,6 +1,7 @@
 from os import environ as env
 from pymongo import MongoClient, UpdateOne, ASCENDING
 from collections import Counter
+import time
 
 # the connection URI do the MongoDB database
 MONGODB_URI = env.get('MONGODB_URI') or 'mongodb://localhost:27017/aggie'
@@ -103,6 +104,8 @@ def update_collection(date_bins):
             })  
         
 def run():
+    start = time.time()
     all_tags = get_tags()
     date_bins = bin_dates(all_tags)
     update_collection(date_bins)
+    print("timeline: " + str(time.time() - start))

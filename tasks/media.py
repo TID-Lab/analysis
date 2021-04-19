@@ -1,5 +1,6 @@
 from os import environ as env
 from pymongo import MongoClient, UpdateOne, ASCENDING
+import time
 
 # the connection URI do the MongoDB database
 MONGODB_URI = env.get('MONGODB_URI') or 'mongodb://localhost:27017/aggie'
@@ -90,6 +91,8 @@ def update_collection(media_types):
             })  
 
 def run():
+    start = time.time()
     all_tags = get_tags()
     media_types = get_media_types(all_tags)
     update_collection(media_types)
+    print("media: " + str(time.time() - start))

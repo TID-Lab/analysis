@@ -1,5 +1,6 @@
 from os import environ as env
 from pymongo import MongoClient, UpdateOne, ASCENDING
+import time
 
 # the connection URI do the MongoDB database
 MONGODB_URI = env.get('MONGODB_URI') or 'mongodb://localhost:27017/aggie'
@@ -60,6 +61,8 @@ def update_collection(tags):
             })  
 
 def run():
+    start = time.time()
     tags = get_tags()
     update_collection(tags)
     # print('Tags Process Complete')
+    print("tags: " + str(time.time() - start))
