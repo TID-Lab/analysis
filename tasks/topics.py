@@ -19,6 +19,10 @@ topic_terms = {
 
 # ==================================================
 
+# indexes the topics field in the reports collection
+def index_fields():
+    client['aggie']['reports'].create_index('tags')
+
 # assembles Aho-Corasick automatons for each topic
 def assemble_automatons(topic_terms):
     topic_automatons = {}
@@ -55,9 +59,6 @@ def get_reports(timestamp):
 # returns a list of topics matching the report
 def get_topics(report):
     topics = {}
-    
-    if ('content' not in report):
-        print(report)
 
     # a list of strings to search through; add fields as needed
     searchables = [ report['content'] ]
@@ -86,13 +87,13 @@ def add_topics(reports):
 
 # saves the timestamp of the last report into the database
 def save_last_report_timestamp(last_report_timestamp):
-    print(last_report_timestamp)
     tasks = client['aggie']['tasks']
     filter = {'name': 'topics'}
     tasks.update_one(filter, {'$set': {'lastReportTimestamp': last_report_timestamp}}, upsert=True)
 
 topic_automatons = assemble_automatons(topic_terms)
 client = MongoClient(MONGODB_URI)
+index_fields()
 
 # Executes the task
 def run():
