@@ -21,7 +21,7 @@ topic_terms = {
 
 # indexes the topics field in the reports collection
 def index_fields():
-    client['aggie']['reports'].create_index('tags')
+    client['aggie']['reports'].create_index('topics')
 
 # assembles Aho-Corasick automatons for each topic
 def assemble_automatons(topic_terms):
