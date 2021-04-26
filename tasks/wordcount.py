@@ -102,6 +102,14 @@ def filter_words(words1, words2, tagged_total_content):
     return filtered_words
     
 def update_collection(words):
+    updates = []
+
+    visualization.create_index([
+        ('name', 1),
+        ('read_only', 1),
+        ('tag', 1)
+    ])
+
     for word in words:
         collection_word = visualization.find_one({
             'name': word.name,

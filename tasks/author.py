@@ -94,6 +94,14 @@ def get_authors(all_tags):
     return authors + read_authors + tag_authors
 
 def update_collection(authors):
+    updates = []
+
+    visualization.create_index([
+        ('name', 1),
+        ('read_only', 1),
+        ('tag', 1)
+    ])
+
     for author in authors: 
         collection_author = visualization.find_one({'name': author.name, 'read_only':author.read_only, 'tag': author.tag})
 

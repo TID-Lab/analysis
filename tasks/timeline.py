@@ -86,6 +86,17 @@ def bin_dates(all_tags):
     return date_bins + read_date_bins + tagged_date_bins
 
 def update_collection(date_bins):
+    updates = []
+
+    visualization.create_index([
+        ('day', 1),
+        ('hour', 1),
+        ('month', 1),
+        ('year', 1),
+        ('read_only', 1),
+        ('tag', 1)
+    ])
+
     for bin in date_bins:
         collection_time = visualization.find_one({
             'day': bin.day, 

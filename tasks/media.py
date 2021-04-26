@@ -83,6 +83,12 @@ def get_media_types(all_tags):
 
 def update_collection(media_types):
 
+    visualization.create_index([
+        ('name', 1),
+        ('read_only', 1),
+        ('tag', 1)
+    ])
+
     for medium in media_types:
         
         collection_media = visualization.find_one({'name': medium.name, 'read_only': medium.read_only, 'tag': medium.tag})

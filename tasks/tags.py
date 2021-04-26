@@ -54,6 +54,12 @@ def get_tags():
     return tags
 
 def update_collection(tags):
+    updates = []
+
+    visualization.create_index([
+        ('name', 1)
+    ])
+
     for tag in tags:
         collection_tag = visualization.find_one({'name': tag.name})
         if (collection_tag is None):
