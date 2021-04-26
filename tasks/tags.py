@@ -36,7 +36,7 @@ def index_collections():
 def get_tags():
     tags = []
     updates = []
-    for report in reports.find({'$nor': [{'read': False}, {'tag_check': {'$exists': True}}, {'smtcTags': {'$size': 0}}]}).sort('authoredAt', 1).limit(MAX_REPORTS):
+    for report in reports.find({'tag_check': {"$exists": False}, 'hasSMTCTags': True}).sort('authoredAt', 1).limit(MAX_REPORTS):
         
         smtcTagList = []
 
