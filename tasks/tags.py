@@ -10,7 +10,7 @@ reports = db['reports']
 visualization = db['tagVisualization']
 smtcTags = db['smtctags']
 
-MAX_REPORTS = 350
+MAX_REPORTS = 1000
 
 class Tag:
     def __init__(self, name, count, color):
@@ -23,6 +23,15 @@ class Tag:
 
     def debug(self):
         print("Name ", self.name, " count ", self.count)
+
+def index_collections():
+    visualization.create_index([
+        ('name', 1)
+    ])
+
+    reports.create_index([
+        ('tag_check', 1)
+    ])
 
 def get_tags():
     tags = []
@@ -55,23 +64,29 @@ def get_tags():
     return tags
 
 def update_collection(tags):
+    updates = []
+
     for tag in tags:
-        collection_tag = visualization.find_one({'name': tag.name})
-        if (collection_tag is None):
-            visualization.insert_one({
-                'name': tag.name,
-                'count': tag.count,
-                'color': tag.color
-            })
-        else:
-            visualization.update({
-                'name': tag.name
-            },{
-                '$inc': { 'count': tag.count} 
-            })  
+        updates.append(UpdateOne(
+            {'name': tag.name}, 
+            {
+                '$set': {
+                    'name': tag.name, 
+                    'color': tag.color
+                }, 
+                '$inc': { 
+                    'count': tag.count
+                }
+            }, 
+            upsert= True
+        ))
+    
+    if (len(updates) > 0):  
+        visualization.bulk_write(updates)
 
 def run():
     start = time.time()
+    index_collections()
     tags = get_tags()
     update_collection(tags)
     # print('Tags Process Complete')

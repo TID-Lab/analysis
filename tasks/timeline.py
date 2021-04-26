@@ -12,7 +12,7 @@ visualization = db['timeVisualization']
 tags = db['tagVisualization']
 smtcTags = db['smtctags']
 
-MAX_REPORTS = 350
+MAX_REPORTS = 1000
 
 def get_tags():
     all_tags = []
@@ -20,6 +20,20 @@ def get_tags():
         all_tags.append(tag['name'])
 
     return all_tags
+
+def index_collections():
+    visualization.create_index([
+        ('day', 1),
+        ('hour', 1),
+        ('month', 1),
+        ('year', 1),
+        ('read_only', 1),
+        ('tag', 1)
+    ])
+
+    reports.create_index([
+        ('time_check', 1)
+    ])
 
 class ReportByDate:
     def __init__(self, hour, day, month, year, count, read_only, tag):
@@ -87,39 +101,40 @@ def bin_dates(all_tags):
     return date_bins + read_date_bins + tagged_date_bins
 
 def update_collection(date_bins):
+    updates = []
+
     for bin in date_bins:
-        collection_time = visualization.find_one({
-            'day': bin.day, 
-            'hour': bin.hour, 
-            'month': bin.month, 
-            'year': bin.year,
-            'read_only': bin.read_only,
-            'tag': bin.tag
-        })
-        if (collection_time is None):
-            visualization.insert_one({
-                'day': bin.day, 
-                'hour': bin.hour, 
-                'month': bin.month, 
-                'year': bin.year,
-                'count': bin.count,
-                'read_only': bin.read_only,
-                'tag': bin.tag
-            })
-        else:
-            visualization.update({
+        updates.append(UpdateOne(
+            {
                 'day': bin.day, 
                 'hour': bin.hour, 
                 'month': bin.month, 
                 'year': bin.year,
                 'read_only': bin.read_only,
                 'tag': bin.tag
-            },{
-                '$inc': { 'count': bin.count } 
-            })  
+            },
+            {
+                '$set': {
+                    'day': bin.day, 
+                    'hour': bin.hour, 
+                    'month': bin.month, 
+                    'year': bin.year,
+                    'read_only': bin.read_only,
+                    'tag': bin.tag
+                },
+                '$inc': {
+                    'count': bin.count
+                }                
+            },
+            upsert=True
+        ))
+
+    if (len(updates) > 0):
+        visualization.bulk_write(updates)
         
 def run():
     start = time.time()
+    index_collections()
     all_tags = get_tags()
     date_bins = bin_dates(all_tags)
     update_collection(date_bins)

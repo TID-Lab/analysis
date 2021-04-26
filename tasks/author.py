@@ -12,7 +12,7 @@ tags = db['tagVisualization']
 smtcTags = db['smtctags']
 TOP_AUTHORS = 50
 
-MAX_REPORTS = 350
+MAX_REPORTS = 1000
 
 class Author:
     def __init__(self, name, sub_count, report_count, read_only, tag):
@@ -27,6 +27,17 @@ class Author:
 
     def debug(self):
         print("Name ", self.name, " read ", self.read_only)
+
+def index_collections():
+    visualization.create_index([
+        ('name', 1),
+        ('read_only', 1),
+        ('tag', 1)
+    ])
+
+    reports.create_index([
+        ("author_check", 1)
+    ])
 
 def get_tags():
     all_tags = []
@@ -95,28 +106,35 @@ def get_authors(all_tags):
     return authors + read_authors + tag_authors
 
 def update_collection(authors):
+    updates = []
+
     for author in authors: 
-        collection_author = visualization.find_one({'name': author.name, 'read_only':author.read_only, 'tag': author.tag})
-
-        if (collection_author is None):
-            visualization.insert_one({
-                'name': author.name,
-                'reportCount': author.report_count,
-                'subCount': author.sub_count,
-                'read_only': author.read_only,
+        updates.append(UpdateOne(
+            {
+                'name': author.name, 
+                'read_only':author.read_only, 
                 'tag': author.tag
-            })
-        else:
-            visualization.update({
-                'name': author.name,
-                'read_only': author.read_only,
-                'tag': author.tag
-            },{
-                '$inc': { 'reportCount': author.report_count} 
-            })           
+            }, 
+            {
+                '$set': {
+                    'name': author.name,
+                    'subCount': author.sub_count,
+                    'read_only': author.read_only,
+                    'tag': author.tag
+                }, 
+                '$inc': { 
+                    'reportCount': author.report_count
+                }
+            }, 
+            upsert= True
+        ))       
 
+    if (len(updates) > 0):  
+        visualization.bulk_write(updates)
+        
 def run():
     start = time.time()
+    index_collections()
     all_tags = get_tags()
     authors = get_authors(all_tags)
     update_collection(authors)

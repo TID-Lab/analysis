@@ -17,7 +17,7 @@ visualization = db['wordVisualization']
 tags = db['tagVisualization']
 smtcTags = db['smtctags']
 
-MAX_REPORTS = 350
+MAX_REPORTS = 500
 
 def get_tags():
     all_tags = []
@@ -39,6 +39,15 @@ class Word:
     def debug(self):
         print('name ', self.name, ' count ', self.count)
 
+def index_collections():
+    visualization.create_index([
+        ('name', 1),
+        ('read_only', 1),
+        ('tag', 1)
+    ])
+    reports.create_index([
+        ('word_check', 1)
+    ])
 def get_words(all_tags):
     updates = []
     total_content = ''
@@ -103,30 +112,34 @@ def filter_words(words1, words2, tagged_total_content):
     return filtered_words
     
 def update_collection(words):
+    updates = []
+
     for word in words:
-        collection_word = visualization.find_one({
-            'name': word.name,
-            'read_only': word.read_only,
-            'tag': word.tag
-        })
-        if (collection_word is None):
-            visualization.insert_one({
-                'name': word.name,
-                'count': word.count,
-                'read_only': word.read_only,
-                'tag': word.tag
-            })
-        else:
-            visualization.update({
+        updates.append(UpdateOne(
+            {
                 'name': word.name,
                 'read_only': word.read_only,
                 'tag': word.tag
-            },{
-                '$inc': { 'count': word.count} 
-            })  
+            },
+            {
+                '$set': {
+                    'name': word.name,
+                    'read_only': word.read_only,
+                    'tag': word.tag
+                },
+                '$inc': {
+                    'count': word.count
+                }
+            },
+            upsert=True
+        ))
+
+    if (len(updates) > 0):  
+        visualization.bulk_write(updates)
 
 def run():
     start = time.time()
+    index_collections()
     all_tags = get_tags()
     all_words = (get_words(all_tags))
     filtered_words = filter_words(all_words[0], all_words[1], all_words[2])

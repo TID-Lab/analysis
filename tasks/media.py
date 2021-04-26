@@ -11,7 +11,7 @@ visualization = db['mediaVisualization']
 tags = db['tagVisualization']
 smtcTags = db['smtctags']
 
-MAX_REPORTS = 350
+MAX_REPORTS = 1000
 
 class MediaType:
     def __init__(self, name, count, read_only, tag):
@@ -25,6 +25,17 @@ class MediaType:
 
     def debug(self):
         print('name ', self.name, ' count ', self.count)
+
+def index_collections():
+    visualization.create_index([
+        ('name', 1),
+        ('read_only', 1),
+        ('tag', 1)
+    ])
+
+    reports.create_index([
+        ("media_check", 1)
+    ])
 
 def get_tags():
     all_tags = []
@@ -83,29 +94,34 @@ def get_media_types(all_tags):
     return media_types + read_media_types + tagged_media_types
 
 def update_collection(media_types):
+    updates = []
 
     for medium in media_types:
-        
-        collection_media = visualization.find_one({'name': medium.name, 'read_only': medium.read_only, 'tag': medium.tag})
+        updates.append(UpdateOne(
+            {
+                'name': medium.name, 
+                'read_only': medium.read_only, 
+                'tag': medium.tag
+            },
+            {
+                '$set': {
+                    'name': medium.name,
+                    'read_only': medium.read_only,
+                    'tag': medium.tag
+                },
+                '$inc': {
+                    'count': medium.count
+                }
+            },
+            upsert = True
+        ))
 
-        if (collection_media is None):
-            visualization.insert_one({
-                'name': medium.name,
-                'count': medium.count,
-                'read_only': medium.read_only,
-                'tag': medium.tag
-            })
-        else:
-            visualization.update({
-                'name': medium.name,
-                'read_only': medium.read_only,
-                'tag': medium.tag
-            },{
-                '$inc': { 'count': medium.count} 
-            })  
+    if (len(updates) > 0):  
+        visualization.bulk_write(updates)
 
 def run():
     start = time.time()
+    index_collections()
     all_tags = get_tags()
     media_types = get_media_types(all_tags)
     update_collection(media_types)
