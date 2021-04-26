@@ -28,7 +28,7 @@ class Author:
         print("Name ", self.name, " read ", self.read_only)
 
 def index_collections():
-  visualization.create_index([
+    visualization.create_index([
         ('name', 1),
         ('read_only', 1),
         ('tag', 1)
