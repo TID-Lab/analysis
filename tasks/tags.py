@@ -61,19 +61,22 @@ def update_collection(tags):
     ])
 
     for tag in tags:
-        collection_tag = visualization.find_one({'name': tag.name})
-        if (collection_tag is None):
-            visualization.insert_one({
-                'name': tag.name,
-                'count': tag.count,
-                'color': tag.color
-            })
-        else:
-            visualization.update({
-                'name': tag.name
-            },{
-                '$inc': { 'count': tag.count} 
-            })  
+        updates.append(UpdateOne(
+            {'name': tag.name}, 
+            {
+                '$set': {
+                    'name': tag.name, 
+                    'color': tag.color
+                }, 
+                '$inc': { 
+                    'count': tag.count
+                }
+            }, 
+            upsert= True
+        ))
+    
+    if (len(updates) > 0):  
+        visualization.bulk_write(updates)
 
 def run():
     tags = get_tags()

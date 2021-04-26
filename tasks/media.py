@@ -90,24 +90,27 @@ def update_collection(media_types):
     ])
 
     for medium in media_types:
-        
-        collection_media = visualization.find_one({'name': medium.name, 'read_only': medium.read_only, 'tag': medium.tag})
+        updates.append(UpdateOne(
+            {
+                'name': medium.name, 
+                'read_only': medium.read_only, 
+                'tag': medium.tag
+            },
+            {
+                '$set': {
+                    'name': medium.name,
+                    'read_only': medium.read_only,
+                    'tag': medium.tag
+                },
+                '$inc': {
+                    'count': medium.count
+                }
+            },
+            upsert = True
+        ))
 
-        if (collection_media is None):
-            visualization.insert_one({
-                'name': medium.name,
-                'count': medium.count,
-                'read_only': medium.read_only,
-                'tag': medium.tag
-            })
-        else:
-            visualization.update({
-                'name': medium.name,
-                'read_only': medium.read_only,
-                'tag': medium.tag
-            },{
-                '$inc': { 'count': medium.count} 
-            })  
+    if (len(updates) > 0):  
+        visualization.bulk_write(updates)
 
 def run():
     all_tags = get_tags()

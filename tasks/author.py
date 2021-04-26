@@ -103,25 +103,29 @@ def update_collection(authors):
     ])
 
     for author in authors: 
-        collection_author = visualization.find_one({'name': author.name, 'read_only':author.read_only, 'tag': author.tag})
-
-        if (collection_author is None):
-            visualization.insert_one({
-                'name': author.name,
-                'reportCount': author.report_count,
-                'subCount': author.sub_count,
-                'read_only': author.read_only,
+        updates.append(UpdateOne(
+            {
+                'name': author.name, 
+                'read_only':author.read_only, 
                 'tag': author.tag
-            })
-        else:
-            visualization.update({
-                'name': author.name,
-                'read_only': author.read_only,
-                'tag': author.tag
-            },{
-                '$inc': { 'reportCount': author.report_count} 
-            })           
+            }, 
+            {
+                '$set': {
+                    'name': author.name,
+                    'subCount': author.sub_count,
+                    'read_only': author.read_only,
+                    'tag': author.tag
+                }, 
+                '$inc': { 
+                    'reportCount': author.report_count
+                }
+            }, 
+            upsert= True
+        ))       
 
+    if (len(updates) > 0):  
+        visualization.bulk_write(updates)
+        
 def run():
     all_tags = get_tags()
     authors = get_authors(all_tags)

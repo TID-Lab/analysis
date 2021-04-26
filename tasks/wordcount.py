@@ -111,26 +111,27 @@ def update_collection(words):
     ])
 
     for word in words:
-        collection_word = visualization.find_one({
-            'name': word.name,
-            'read_only': word.read_only,
-            'tag': word.tag
-        })
-        if (collection_word is None):
-            visualization.insert_one({
-                'name': word.name,
-                'count': word.count,
-                'read_only': word.read_only,
-                'tag': word.tag
-            })
-        else:
-            visualization.update({
+        updates.append(UpdateOne(
+            {
                 'name': word.name,
                 'read_only': word.read_only,
                 'tag': word.tag
-            },{
-                '$inc': { 'count': word.count} 
-            })  
+            },
+            {
+                '$set': {
+                    'name': word.name,
+                    'read_only': word.read_only,
+                    'tag': word.tag
+                },
+                '$inc': {
+                    'count': word.count
+                }
+            },
+            upsert=True
+        ))
+
+    if (len(updates) > 0):  
+        visualization.bulk_write(updates)
 
 def run():
     all_tags = get_tags()
