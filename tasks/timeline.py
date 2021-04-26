@@ -20,6 +20,20 @@ def get_tags():
 
     return all_tags
 
+def index_collections():
+    visualization.create_index([
+        ('day', 1),
+        ('hour', 1),
+        ('month', 1),
+        ('year', 1),
+        ('read_only', 1),
+        ('tag', 1)
+    ])
+
+    reports.create_index([
+        ('time_check', 1)
+    ])
+
 class ReportByDate:
     def __init__(self, hour, day, month, year, count, read_only, tag):
         self.day = day
@@ -88,15 +102,6 @@ def bin_dates(all_tags):
 def update_collection(date_bins):
     updates = []
 
-    visualization.create_index([
-        ('day', 1),
-        ('hour', 1),
-        ('month', 1),
-        ('year', 1),
-        ('read_only', 1),
-        ('tag', 1)
-    ])
-
     for bin in date_bins:
         updates.append(UpdateOne(
             {
@@ -127,6 +132,7 @@ def update_collection(date_bins):
         visualization.bulk_write(updates)
         
 def run():
+    index_collections()
     all_tags = get_tags()
     date_bins = bin_dates(all_tags)
     update_collection(date_bins)

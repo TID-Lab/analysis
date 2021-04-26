@@ -38,6 +38,15 @@ class Word:
     def debug(self):
         print('name ', self.name, ' count ', self.count)
 
+def index_collections():
+    visualization.create_index([
+        ('name', 1),
+        ('read_only', 1),
+        ('tag', 1)
+    ])
+    reports.create_index([
+        ('word_check', 1)
+    ])
 def get_words(all_tags):
     updates = []
     total_content = ''
@@ -104,12 +113,6 @@ def filter_words(words1, words2, tagged_total_content):
 def update_collection(words):
     updates = []
 
-    visualization.create_index([
-        ('name', 1),
-        ('read_only', 1),
-        ('tag', 1)
-    ])
-
     for word in words:
         updates.append(UpdateOne(
             {
@@ -134,6 +137,7 @@ def update_collection(words):
         visualization.bulk_write(updates)
 
 def run():
+    index_collections()
     all_tags = get_tags()
     all_words = (get_words(all_tags))
     filtered_words = filter_words(all_words[0], all_words[1], all_words[2])

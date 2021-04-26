@@ -25,6 +25,17 @@ class MediaType:
     def debug(self):
         print('name ', self.name, ' count ', self.count)
 
+def index_collections():
+    visualization.create_index([
+        ('name', 1),
+        ('read_only', 1),
+        ('tag', 1)
+    ])
+
+    reports.create_index([
+        ("media_check", 1)
+    ])
+
 def get_tags():
     all_tags = []
     for tag in tags.find({}):
@@ -82,12 +93,7 @@ def get_media_types(all_tags):
     return media_types + read_media_types + tagged_media_types
 
 def update_collection(media_types):
-
-    visualization.create_index([
-        ('name', 1),
-        ('read_only', 1),
-        ('tag', 1)
-    ])
+    updates = []
 
     for medium in media_types:
         updates.append(UpdateOne(
@@ -113,6 +119,7 @@ def update_collection(media_types):
         visualization.bulk_write(updates)
 
 def run():
+    index_collections()
     all_tags = get_tags()
     media_types = get_media_types(all_tags)
     update_collection(media_types)

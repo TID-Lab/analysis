@@ -27,6 +27,17 @@ class Author:
     def debug(self):
         print("Name ", self.name, " read ", self.read_only)
 
+def index_collections():
+  visualization.create_index([
+        ('name', 1),
+        ('read_only', 1),
+        ('tag', 1)
+    ])
+
+    reports.create_index([
+        ("author_check", 1)
+    ])
+
 def get_tags():
     all_tags = []
     for tag in tags.find({}):
@@ -96,12 +107,6 @@ def get_authors(all_tags):
 def update_collection(authors):
     updates = []
 
-    visualization.create_index([
-        ('name', 1),
-        ('read_only', 1),
-        ('tag', 1)
-    ])
-
     for author in authors: 
         updates.append(UpdateOne(
             {
@@ -127,6 +132,7 @@ def update_collection(authors):
         visualization.bulk_write(updates)
         
 def run():
+    index_collections()
     all_tags = get_tags()
     authors = get_authors(all_tags)
     update_collection(authors)

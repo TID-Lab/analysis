@@ -23,6 +23,15 @@ class Tag:
     def debug(self):
         print("Name ", self.name, " count ", self.count)
 
+def index_collections():
+    visualization.create_index([
+        ('name', 1)
+    ])
+
+    reports.create_index([
+        ('tag_check', 1)
+    ])
+
 def get_tags():
     tags = []
     updates = []
@@ -56,10 +65,6 @@ def get_tags():
 def update_collection(tags):
     updates = []
 
-    visualization.create_index([
-        ('name', 1)
-    ])
-
     for tag in tags:
         updates.append(UpdateOne(
             {'name': tag.name}, 
@@ -79,5 +84,6 @@ def update_collection(tags):
         visualization.bulk_write(updates)
 
 def run():
+    index_collections()
     tags = get_tags()
     update_collection(tags)
