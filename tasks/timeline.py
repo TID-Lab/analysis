@@ -11,7 +11,7 @@ visualization = db['timeVisualization']
 tags = db['tagVisualization']
 smtcTags = db['smtctags']
 
-MAX_REPORTS = 350
+MAX_REPORTS = 1000
 
 def get_tags():
     all_tags = []

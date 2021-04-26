@@ -16,7 +16,7 @@ visualization = db['wordVisualization']
 tags = db['tagVisualization']
 smtcTags = db['smtctags']
 
-MAX_REPORTS = 350
+MAX_REPORTS = 500
 
 def get_tags():
     all_tags = []

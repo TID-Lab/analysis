@@ -10,7 +10,7 @@ visualization = db['mediaVisualization']
 tags = db['tagVisualization']
 smtcTags = db['smtctags']
 
-MAX_REPORTS = 350
+MAX_REPORTS = 1000
 
 class MediaType:
     def __init__(self, name, count, read_only, tag):

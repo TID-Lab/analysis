@@ -9,7 +9,7 @@ reports = db['reports']
 visualization = db['tagVisualization']
 smtcTags = db['smtctags']
 
-MAX_REPORTS = 350
+MAX_REPORTS = 1000
 
 class Tag:
     def __init__(self, name, count, color):

@@ -11,7 +11,7 @@ tags = db['tagVisualization']
 smtcTags = db['smtctags']
 TOP_AUTHORS = 50
 
-MAX_REPORTS = 350
+MAX_REPORTS = 1000
 
 class Author:
     def __init__(self, name, sub_count, report_count, read_only, tag):
